@@ -98,11 +98,11 @@
             ias_gloves: 20, 
             max_damage_gloves: 3, 
 
-            // Boot Specific Affixes
-            frw: 30, 
+            // Boot/Circlet Specific Affixes
+            frw: 30, // Faster Run/Walk on Boots/Circlets
             fhr: 10, // FHR max on boots
 
-            // NEW: Circlet and Belt specific affixes (higher rolls)
+            // Circlet and Belt specific affixes (higher rolls)
             life_belt_circlet: 60, // Max life on belts and circlets
             str_belt: 30, // Max strength on belts
             fhr_belt: 24, // Max FHR on belts
@@ -115,10 +115,10 @@
             Gloves: ['ias_gloves', 'str', 'dex', 'life', 'mana', 'life_leech', 'mana_leech', 'fire_res', 'cold_res', 'light_res', 'poison_res', 'max_damage_gloves', 'crushing_blow_gloves', 'plus_skills_gloves'],
             Boots: ['frw', 'fhr', 'life', 'mana', 'fire_res', 'cold_res', 'light_res', 'poison_res'],
             
-            // NEW: Circlet (Uses Amulet FCR/Skills, but higher Life roll)
-            Circlet: ['fcr_amulet', 'plus_skills_amulet', 'str', 'dex', 'life_belt_circlet', 'mana', 'all_res', 'fire_res', 'cold_res', 'light_res', 'poison_res'],
+            // Circlet: Now includes FRW, Life Leech, and Mana Leech
+            Circlet: ['fcr_amulet', 'plus_skills_amulet', 'str', 'dex', 'life_belt_circlet', 'mana', 'all_res', 'frw', 'life_leech', 'mana_leech', 'fire_res', 'cold_res', 'light_res', 'poison_res'],
             
-            // NEW: Belt (Higher Life/Str/FHR rolls)
+            // Belt (Higher Life/Str/FHR rolls)
             Belt: ['fhr_belt', 'str_belt', 'dex', 'life_belt_circlet', 'mana', 'all_res', 'fire_res', 'cold_res', 'light_res', 'poison_res'],
         };
 
@@ -147,14 +147,14 @@
             'ias_gloves': { label: 'Increased Attack Speed (IAS)', max: MAX_ROLLS.ias_gloves, unit: '%', type: 'number' },
             'max_damage_gloves': { label: '+Max Damage', max: MAX_ROLLS.max_damage_gloves, unit: '', type: 'number' },
 
-            // Boots Specific
+            // Boots/Circlet Specific
             'frw': { label: 'Faster Run/Walk (FRW)', max: MAX_ROLLS.frw, unit: '%', type: 'number' },
             'fhr': { label: 'Faster Hit Recovery (FHR)', max: MAX_ROLLS.fhr, unit: '%', type: 'number' },
             
-            // NEW: Circlet and Belt shared large stats
+            // Circlet and Belt shared large stats
             'life_belt_circlet': { label: 'Life', max: MAX_ROLLS.life_belt_circlet, unit: '', type: 'number' },
             
-            // NEW: Belt specific large stats
+            // Belt specific large stats
             'str_belt': { label: 'Strength', max: MAX_ROLLS.str_belt, unit: '', type: 'number' },
             'fhr_belt': { label: 'Faster Hit Recovery (FHR)', max: MAX_ROLLS.fhr_belt, unit: '%', type: 'number' },
             
@@ -256,6 +256,21 @@
             renderInputs(itemType);
             calculateScore();
         }
+        
+        // --- VALUE ESTIMATION ---
+
+        /**
+         * Provides a highly generalized, speculative rune value based on the score.
+         * This value is NOT a guarantee of trade price.
+         */
+        function getEstimatedValue(score) {
+            if (score >= 5.5) return "Lo - Ber Rune (or multiple High Runes)";
+            if (score >= 5.0) return "Vex - Ohm Rune";
+            if (score >= 4.5) return "Mal - Ist Rune";
+            if (score >= 4.0) return "Pul - Um Rune";
+            return "No significant trade value (Self-Use Only)";
+        }
+
 
         // --- MAIN CALCULATION ---
 
@@ -316,7 +331,10 @@
 
         function displayResult(finalScore, itemType, topSixAffixes) {
             const resultDiv = document.getElementById('result');
-            const gradeData = getGrade(parseFloat(finalScore));
+            const scoreNum = parseFloat(finalScore);
+            const gradeData = getGrade(scoreNum);
+            const estimatedValue = getEstimatedValue(scoreNum);
+
 
             let breakdownHtml = '';
 
@@ -347,6 +365,18 @@
                     <p class="text-2xl font-bold">${gradeData.grade}</p>
                     <p class="text-xs italic text-gray-400 mt-1">${gradeData.desc}</p>
                 </div>
+
+                <div class="bg-gray-800 p-3 rounded-lg border border-gray-700 mb-4">
+                    <h4 class="text-lg font-semibold text-center text-green-400 mb-1">
+                        Estimated Rune Value
+                    </h4>
+                    <p class="text-center text-white font-mono text-xl">${estimatedValue}</p>
+                    <p class="text-xs text-center text-red-400 mt-2">
+                        *DISCLAIMER: This is a **speculative estimate** based on the score. Actual trade value varies heavily by platform, economy, and specific demand.*
+                    </p>
+                </div>
+
+
                 <h4 class="text-lg font-semibold border-b pb-1 border-gray-600 mb-2 text-d2-gold">Top Affix Breakdown</h4>
                 ${breakdownHtml}
             `;
@@ -391,7 +421,7 @@
 
         <!-- Result Display -->
         <div id="result" class="result-box mt-8 p-4 rounded-xl">
-            <!-- Score and Grade will be inserted here by JavaScript -->
+            <!-- Score, Grade, and Value will be inserted here by JavaScript -->
         </div>
 
     </div>
@@ -407,6 +437,7 @@
     </div>
 
 </body>
+
 
 
 
