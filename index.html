@@ -81,8 +81,10 @@
         .font-diablo {
             font-family: 'Cinzel Decorative', 'serif';
         }
-        /* Style for the torch/anni inputs to match */
-        #torch-inputs-container select, #anni-inputs-container input {
+        /* Style for inputs in the special containers to match */
+        #torch-inputs-container select, #torch-inputs-container input,
+        #anni-inputs-container input, #sc-inputs-container input, 
+        #gc-inputs-container select, #gc-inputs-container input {
             background-color: #333;
             border: 1px solid #444;
             color: white;
@@ -107,13 +109,16 @@
             mf_ring: 15, mf_amulet_circlet: 35, mf_other: 25,
             
             // Hellfire Torch Max Rolls
-            torch_res: 20, 
-            torch_stats: 20, 
+            torch_res: 20, torch_stats: 20, 
             
             // Annihilus Max Rolls
-            anni_stats: 20,
-            anni_res: 20,
-            anni_exp: 10, 
+            anni_stats: 20, anni_res: 20, anni_exp: 10, 
+            
+            // Small Charm Max Rolls (SC)
+            sc_life: 20, sc_all_res: 5, sc_single_res: 11, sc_mf: 7, sc_max_damage: 3, sc_ar: 20,
+
+            // Grand Charm Max Rolls (GC) - Secondary Affixes
+            gc_life: 45, gc_fhr: 12, gc_max_damage: 10, gc_ar: 76, gc_mf: 40, gc_gf: 80,
         };
 
         const ITEM_AFFIXES = {
@@ -124,11 +129,13 @@
             Circlet: ['fcr_amulet', 'plus_skills_amulet', 'str', 'dex', 'life_belt_circlet', 'mana', 'all_res', 'frw', 'life_leech', 'mana_leech', 'fire_res', 'cold_res', 'light_res', 'poison_res', 'mf_amulet_circlet'],
             Belt: ['fhr_belt', 'str_belt', 'dex', 'life_belt_circlet', 'mana', 'all_res', 'fire_res', 'cold_res', 'light_res', 'poison_res', 'mf_other'],
             Torch: ['torch_res', 'torch_stats'],
-            Annihilus: ['anni_stats', 'anni_res', 'anni_exp'], // New
+            Annihilus: ['anni_stats', 'anni_res', 'anni_exp'],
+            SmallCharm: ['sc_life', 'sc_all_res', 'sc_single_res', 'sc_mf', 'sc_max_damage', 'sc_ar'],
+            GrandCharm: ['gc_life', 'gc_fhr', 'gc_max_damage', 'gc_ar', 'gc_mf', 'gc_gf'],
         };
 
         const INPUT_FIELDS = {
-            // Rare Item Inputs
+            // Rare Item Inputs (MIMIC THE AFFIXES LISTED IN ITEM_AFFIXES above)
             'str': { label: 'Strength', max: MAX_ROLLS.str, unit: '', type: 'number' },
             'dex': { label: 'Dexterity', max: MAX_ROLLS.dex, unit: '', type: 'number' },
             'life': { label: 'Life', max: MAX_ROLLS.life, unit: '', type: 'number' },
@@ -157,10 +164,27 @@
             'mf_ring': { label: 'Magic Find', max: MAX_ROLLS.mf_ring, unit: '%', type: 'number' },
             'mf_amulet_circlet': { label: 'Magic Find', max: MAX_ROLLS.mf_amulet_circlet, unit: '%', type: 'number' },
             'mf_other': { label: 'Magic Find', max: MAX_ROLLS.mf_other, unit: '%', type: 'number' },
-            // Annihilus Inputs (New)
+            // Torch Inputs
+            'torch_res': { label: 'All Resistances', max: MAX_ROLLS.torch_res, unit: '%', type: 'number' },
+            'torch_stats': { label: 'All Attributes', max: MAX_ROLLS.torch_stats, unit: '', type: 'number' },
+            // Annihilus Inputs
             'anni_stats': { label: 'All Attributes', max: MAX_ROLLS.anni_stats, unit: '', type: 'number' },
             'anni_res': { label: 'All Resistances', max: MAX_ROLLS.anni_res, unit: '%', type: 'number' },
             'anni_exp': { label: 'Experience Gained', max: MAX_ROLLS.anni_exp, unit: '%', type: 'number' },
+            // Small Charm Inputs
+            'sc_life': { label: 'Life', max: MAX_ROLLS.sc_life, unit: '', type: 'number' },
+            'sc_all_res': { label: 'All Resistances', max: MAX_ROLLS.sc_all_res, unit: '%', type: 'number' },
+            'sc_mf': { label: 'Magic Find', max: MAX_ROLLS.sc_mf, unit: '%', type: 'number' },
+            'sc_single_res': { label: 'Single Resistance', max: MAX_ROLLS.sc_single_res, unit: '%', type: 'number' },
+            'sc_max_damage': { label: '+ Max Damage', max: MAX_ROLLS.sc_max_damage, unit: '', type: 'number' },
+            'sc_ar': { label: 'Attack Rating', max: MAX_ROLLS.sc_ar, unit: '', type: 'number' },
+            // Grand Charm Inputs
+            'gc_life': { label: 'Life', max: MAX_ROLLS.gc_life, unit: '', type: 'number' },
+            'gc_fhr': { label: 'Faster Hit Recovery (FHR)', max: MAX_ROLLS.gc_fhr, unit: '%', type: 'number' },
+            'gc_max_damage': { label: 'Max Damage (Max 10)', max: MAX_ROLLS.gc_max_damage, unit: '', type: 'number' },
+            'gc_ar': { label: 'Attack Rating (Max 76)', max: MAX_ROLLS.gc_ar, unit: '', type: 'number' },
+            'gc_mf': { label: 'Magic Find (Max 40%)', max: MAX_ROLLS.gc_mf, unit: '%', type: 'number' },
+            'gc_gf': { label: 'Gold Find (Max 80%)', max: MAX_ROLLS.gc_gf, unit: '%', type: 'number' },
         };
         
         // --- UTILITY FUNCTIONS ---
@@ -185,17 +209,27 @@
             const rareContainer = document.getElementById('affix-inputs-container');
             const torchContainer = document.getElementById('torch-inputs-container');
             const anniContainer = document.getElementById('anni-inputs-container');
+            const scContainer = document.getElementById('sc-inputs-container');
+            const gcContainer = document.getElementById('gc-inputs-container'); // NEW
 
             // Hide all special containers first
             rareContainer.classList.add('hidden');
             torchContainer.classList.add('hidden');
             anniContainer.classList.add('hidden');
+            scContainer.classList.add('hidden');
+            gcContainer.classList.add('hidden'); // NEW
 
             if (itemType === 'Torch') {
                 torchContainer.classList.remove('hidden');
                 rareContainer.innerHTML = '';
             } else if (itemType === 'Annihilus') {
                 anniContainer.classList.remove('hidden');
+                rareContainer.innerHTML = '';
+            } else if (itemType === 'SmallCharm') {
+                scContainer.classList.remove('hidden');
+                rareContainer.innerHTML = '';
+            } else if (itemType === 'GrandCharm') { // NEW
+                gcContainer.classList.remove('hidden');
                 rareContainer.innerHTML = '';
             }
             else {
@@ -259,50 +293,78 @@
         /**
          * Provides a generalized, speculative rune value based on the score and item type.
          */
-        function getEstimatedValue(score, itemType, torchClass = null) {
+        function getEstimatedValue(score, itemType, extraData = {}) {
+            // Torch Logic
             if (itemType === 'Torch') {
+                const totalRoll = extraData.totalRoll || 0;
+                const torchClass = extraData.torchClass || "Unknown";
                 let classTierText = "";
                 let valuation = "No Trade Value (Below 25 Total Roll)";
 
                 // S-Tier (Highest Demand): Paladin, Sorceress
                 if (torchClass === "Paladin" || torchClass === "Sorceress") {
                     classTierText = "(S-Tier: High/Essential Demand)";
-                    if (score >= 38) valuation = `Multiple High Runes (Jah/Ber+) ${classTierText}`; // 19/19+
-                    else if (score >= 35) valuation = `Ohm - Lo Rune ${classTierText}`; // 15/20+
-                    else if (score >= 25) valuation = `Vex - Gul Rune ${classTierText}`; // Vex is the floor for usable Sorc/Pally
-                    else valuation = `Starter/Low Vex/Gul ${classTierText}`; // Base/Low rolls still have value due to class
+                    if (totalRoll >= 38) valuation = `Multiple High Runes (Jah/Ber+) ${classTierText}`; // 19/19+
+                    else if (totalRoll >= 35) valuation = `Ohm - Lo Rune ${classTierText}`; // 15/20+
+                    else if (totalRoll >= 25) valuation = `Vex - Gul Rune ${classTierText}`; // Vex is the floor for usable Sorc/Pally
+                    else valuation = `Starter/Low Vex/Gul ${classTierText}`; 
                 
                 // A-Tier (Moderate Demand): Necromancer, Amazon
                 } else if (torchClass === "Necromancer" || torchClass === "Amazon") {
                     classTierText = "(A-Tier: Moderate Demand)";
-                    if (score >= 38) valuation = `Lo - Sur Rune ${classTierText}`;
-                    else if (score >= 35) valuation = `Vex - Ohm Rune ${classTierText}`;
-                    else if (score >= 30) valuation = `Gul - Ist Rune ${classTierText}`;
-                    else if (score >= 25) valuation = `Um - Pul Rune ${classTierText}`;
+                    if (totalRoll >= 38) valuation = `Lo - Sur Rune ${classTierText}`;
+                    else if (totalRoll >= 35) valuation = `Vex - Ohm Rune ${classTierText}`;
+                    else if (totalRoll >= 30) valuation = `Gul - Ist Rune ${classTierText}`;
+                    else if (totalRoll >= 25) valuation = `Um - Pul Rune ${classTierText}`;
                     else valuation = `Pul Rune (Swap/Starter Torch) ${classTierText}`;
 
                 // B-Tier (Lower Demand): Assassin, Barbarian, Druid
                 } else {
                     classTierText = "(B-Tier: Lower/Swap Demand)";
-                    if (score >= 38) valuation = `Vex - Ohm Rune ${classTierText}`;
-                    else if (score >= 35) valuation = `Ist - Gul Rune ${classTierText}`;
-                    else if (score >= 30) valuation = `Pul - Um Rune ${classTierText}`;
-                    else if (score >= 25) valuation = `Fal - Ko Rune ${classTierText}`;
+                    if (totalRoll >= 38) valuation = `Vex - Ohm Rune ${classTierText}`;
+                    else if (totalRoll >= 35) valuation = `Ist - Gul Rune ${classTierText}`;
+                    else if (totalRoll >= 30) valuation = `Pul - Um Rune ${classTierText}`;
+                    else if (totalRoll >= 25) valuation = `Fal - Ko Rune ${classTierText}`;
                     else valuation = `Ko Rune (Charsi/Self-Use) ${classTierText}`;
                 }
 
                 return valuation;
             } 
             
-            else if (itemType === 'Annihilus') { // Annihilus Logic (Score out of 50)
+            // Annihilus Logic
+            else if (itemType === 'Annihilus') {
                 if (score === 50) return "Top Tier High Runes (Jah/Ber+) [20/20/10]";
                 if (score >= 48) return "Lo - Sur Rune [19/20/x, 20/20/x]";
                 if (score >= 45) return "Ohm - Vex Rune [15+/15+/x]";
                 if (score >= 40) return "Gul - Ist Rune [10+/10+/x]";
                 return "Um Rune (Low/Starter Anni)";
             }
+            
+            // Small Charm Logic (Score 1.0 - 5.0)
+            else if (itemType === 'SmallCharm') { 
+                if (score >= 4.5) return "Multiple High Runes (Jah/Ber+) [Perfect 20/5 or 3/20/20]";
+                if (score >= 4.0) return "Lo - Sur Rune [Near-perfect 20/5 or perfect 20/11]";
+                if (score >= 3.0) return "Vex - Ohm Rune [Perfect 20 Life + usable second stat]";
+                if (score >= 2.0) return "Ist - Gul Rune [Perfect single resistance or good MF/Life]";
+                return "Pul - Um Rune (Usable, but low rolls)";
+            }
 
-            else { // Rare Items (score out of 6.0)
+            // Grand Charm Logic (Score 0.1 - 5.0 * Multiplier)
+            else if (itemType === 'GrandCharm') {
+                const multiplier = extraData.multiplier || 0;
+                const finalScore = score * multiplier;
+                
+                if (finalScore >= 5.0) return "EXTREME High Runes (Ber/Jah) [Perfect LCS, S-Tier]";
+                if (finalScore >= 4.0) return "Lo - Sur Rune [Near-Perfect LCS, S/A-Tier]";
+                if (finalScore >= 3.0) return "Ohm - Vex Rune [High Life/FHR, S/A-Tier]";
+                if (finalScore >= 2.0) return "Ist - Gul Rune [Any Life Skiller, S-Tier/Plain A-Tier]";
+                if (finalScore >= 1.0) return "Um - Pul Rune [Plain S-Tier/Usable A-Tier]";
+                if (finalScore >= 0.5) return "Ko - Fal Rune [Plain B-Tier/Niche]";
+                return "Charsi Food (No valuable combination)";
+            }
+
+            // Rare Items (score out of 6.0)
+            else { 
                 if (score >= 5.5) return "Multiple High Runes (Ber, Jah+)";
                 if (score >= 5.0) return "Vex - Ohm";
                 if (score >= 4.5) return "Mal - Ist";
@@ -335,7 +397,7 @@
             const maxRoll = MAX_ROLLS.torch_res + MAX_ROLLS.torch_stats; 
             
             const gradeData = getTorchGrade(totalRoll);
-            const estimatedValue = getEstimatedValue(totalRoll, itemType, torchClass);
+            const estimatedValue = getEstimatedValue(totalRoll, itemType, { totalRoll, torchClass });
 
             // Determine roll quality text
             const resPerfect = resRoll === MAX_ROLLS.torch_res;
@@ -365,7 +427,7 @@
             displayResult(totalRoll, itemType, breakdownHtml, gradeData, estimatedValue);
         }
 
-        // --- ANNIHILUS SCORING LOGIC (New) ---
+        // --- ANNIHILUS SCORING LOGIC ---
 
         function getAnniGrade(totalRoll) {
             if (totalRoll === 50) return { grade: "PERFECT (20/20/10)", color: "text-red-500", desc: "The ultimate charm. Flawless rolls on all stats." };
@@ -419,6 +481,274 @@
             `;
             
             displayResult(totalRoll, itemType, breakdownHtml, gradeData, estimatedValue);
+        }
+
+        // --- SMALL CHARM SCORING LOGIC ---
+
+        function getSmallCharmGrade(score) {
+            if (score >= 4.5) return { grade: "GODLY (GG)", color: "text-red-500", desc: "Perfect or near-perfect 20 Life / 5 All Resist or 3/20/20. Extreme value." };
+            if (score >= 4.0) return { grade: "HIGH TIER", color: "text-blue-400", desc: "Perfect 20 Life with 10+ Single Res or high MF. Highly sought after." };
+            if (score >= 3.0) return { grade: "SOLID TIER", color: "text-green-400", desc: "Perfect 20 Life alone, or strong 3/20/x. Holds excellent trade value." };
+            if (score >= 2.0) return { grade: "USABLE TRADE", color: "text-yellow-400", desc: "Perfect 5 All Resist, 11 Single Resist, or 7 MF. Great for budget builds." };
+            return { grade: "LOW VALUE", color: "text-gray-500", desc: "Low rolls or off-meta combo. Mostly Charsi or self-use." };
+        }
+
+        function calculateSmallCharmScore() {
+            const itemType = 'SmallCharm';
+            const life = getInputValue('sc_life');
+            const allRes = getInputValue('sc_all_res');
+            const mf = getInputValue('sc_mf');
+            const singleRes = getInputValue('sc_single_res');
+            const maxDam = getInputValue('sc_max_damage');
+            const ar = getInputValue('sc_ar');
+            
+            let score = 0;
+            let breakdown = [];
+            
+            // --- SCORING LOGIC ---
+            // Max score is set to 5.0 (for simplicity and high value combos)
+
+            // 1. 20 Life Combos (Highest Value)
+            if (life > 0) {
+                // Base: 20 Life is worth 2.0 points
+                if (life === MAX_ROLLS.sc_life) score += 2.0;
+
+                // Combo 1: Life / All Res (The GG Charm)
+                if (allRes > 0) {
+                    if (life === MAX_ROLLS.sc_life && allRes === MAX_ROLLS.sc_all_res) {
+                        score = 5.0; // Perfect 20/5
+                        breakdown.push({ label: 'Life/All Res', value: `${life} / ${allRes}%`, score: 5.0, perfect: true, note: "Perfect 20 Life / 5 All Resist!" });
+                    } else if (life === MAX_ROLLS.sc_life && allRes >= 4) {
+                        score += 1.5; // Near perfect life/res
+                    } else if (life === MAX_ROLLS.sc_life && allRes > 0) {
+                        score += 0.5;
+                    }
+                }
+                
+                // Combo 2: Life / Single Res (Highly valuable)
+                else if (singleRes > 0) {
+                    if (life === MAX_ROLLS.sc_life && singleRes === MAX_ROLLS.sc_single_res) {
+                        score = 4.0; // Perfect 20/11
+                        breakdown.push({ label: 'Life/Single Res', value: `${life} / ${singleRes}%`, score: 4.0, perfect: true, note: "Perfect 20 Life / 11 Single Resist!" });
+                    } else if (life === MAX_ROLLS.sc_life && singleRes >= 9) {
+                        score += 1.0; 
+                    }
+                }
+
+                // Combo 3: Life / MF
+                else if (mf > 0) {
+                    if (life === MAX_ROLLS.sc_life && mf === MAX_ROLLS.sc_mf) {
+                        score = 3.5; // Perfect 20/7 MF
+                        breakdown.push({ label: 'Life/MF', value: `${life} / ${mf}%`, score: 3.5, perfect: true, note: "Perfect 20 Life / 7 MF!" });
+                    } else if (life === MAX_ROLLS.sc_life && mf >= 5) {
+                        score += 0.5;
+                    }
+                }
+            } 
+            
+            // 2. Max Damage Combos
+            if (maxDam > 0) {
+                // Combo 4: 3/20/20 (Max/AR/Life)
+                if (ar > 0 && life > 0) {
+                    if (maxDam === MAX_ROLLS.sc_max_damage && ar === MAX_ROLLS.sc_ar && life === MAX_ROLLS.sc_life) {
+                        score = 5.0; // Perfect 3/20/20
+                        breakdown.push({ label: '3/20/20', value: `+${maxDam} Max / ${ar} AR / ${life} Life`, score: 5.0, perfect: true, note: "Perfect 3/20/20!" });
+                    } else if (maxDam === 3 && ar >= 18 && life >= 18) {
+                        score = Math.max(score, 4.5); // Near perfect
+                    }
+                }
+                // Combo 5: 3/20/x (Max/AR)
+                else if (ar > 0) {
+                     if (maxDam === MAX_ROLLS.sc_max_damage && ar === MAX_ROLLS.sc_ar) {
+                        score = Math.max(score, 2.5);
+                        breakdown.push({ label: '3/20/x', value: `+${maxDam} Max / ${ar} AR`, score: 2.5, perfect: true, note: "Perfect 3/20!" });
+                    }
+                }
+            }
+
+            // 3. Standalone rolls (if not already included in a combo)
+            if (score < 2.5) {
+                if (allRes === MAX_ROLLS.sc_all_res) { 
+                    score = Math.max(score, 2.0);
+                    breakdown.push({ label: 'All Resist', value: `${allRes}%`, score: 2.0, perfect: true, note: "Perfect 5 All Resist!" });
+                } else if (singleRes === MAX_ROLLS.sc_single_res) { 
+                    score = Math.max(score, 1.5);
+                    breakdown.push({ label: 'Single Resist', value: `${singleRes}%`, score: 1.5, perfect: true, note: "Perfect 11 Single Resist!" });
+                } else if (mf === MAX_ROLLS.sc_mf) { 
+                    score = Math.max(score, 1.0);
+                    breakdown.push({ label: 'Magic Find', value: `${mf}%`, score: 1.0, perfect: true, note: "Perfect 7 MF!" });
+                }
+            }
+            
+            // Fallback for very low rolls
+            if (score === 0 && (life > 0 || allRes > 0 || mf > 0 || singleRes > 0 || maxDam > 0 || ar > 0)) {
+                score = 0.5; // At least usable
+                breakdown.push({ label: 'Low Roll Combo', value: 'Mix of low stats', score: 0.5, perfect: false, note: "Low rolls on multiple stats." });
+            }
+
+
+            const gradeData = getSmallCharmGrade(score);
+            const estimatedValue = getEstimatedValue(score, itemType);
+            
+            // Build breakdown list for display (showing the highest scoring factor)
+            let breakdownHtml = '';
+            if (breakdown.length > 0) {
+                // If the score is the max 5.0, show the perfect combo text
+                if (score === 5.0 && breakdown[0]) {
+                    breakdownHtml = `
+                        <ul class="space-y-1 text-sm text-gray-300">
+                            <li class="flex justify-between items-center py-0.5 border-b border-gray-700/50">
+                                <span class="font-semibold text-d2-gold">${breakdown[0].label}: ${breakdown[0].value}</span>
+                                <span class="perfect-roll font-mono">${breakdown[0].note}</span>
+                            </li>
+                        </ul>
+                        <p class="text-sm italic mt-4 text-red-400 text-center">
+                            This is considered a **Perfect Godly Charm** (5.0/5.0)
+                        </p>
+                    `;
+                } else {
+                    // Otherwise, just show the score achieved
+                     breakdownHtml = `
+                        <p class="text-center text-gray-400 mt-2">
+                           Scoring based on the highest achievable combination of stats for a small charm.
+                        </p>
+                    `;
+                }
+
+            } else {
+                 breakdownHtml = `<p class="text-center text-gray-500 mt-4">Enter some stats to calculate the value of your Small Charm!</p>`;
+            }
+
+            displayResult(score.toFixed(1), itemType, breakdownHtml, gradeData, estimatedValue);
+        }
+
+        // --- GRAND CHARM SCORING LOGIC (NEW) ---
+
+        const SKILL_TIERS = {
+            'Sorc Lightning': { multiplier: 1.0, tier: 'S-Tier' },
+            'Sorc Cold': { multiplier: 1.0, tier: 'S-Tier' },
+            'Sorc Fire': { multiplier: 1.0, tier: 'S-Tier' },
+            'Pala Combat': { multiplier: 1.0, tier: 'S-Tier' },
+            'Necro Poison': { multiplier: 0.8, tier: 'A-Tier' },
+            'Amazon Javelin': { multiplier: 0.8, tier: 'A-Tier' },
+            'Barb Combat': { multiplier: 0.7, tier: 'A-Tier' },
+            'Druid Elemental': { multiplier: 0.7, tier: 'A-Tier' },
+            'Assa Traps': { multiplier: 0.7, tier: 'A-Tier' },
+            // Lower tiers (for completeness/specific niche)
+            'Pala Defensive': { multiplier: 0.6, tier: 'B-Tier' },
+            'Necro Summon': { multiplier: 0.6, tier: 'B-Tier' },
+            'General Passive': { multiplier: 0.5, tier: 'C-Tier' },
+            'Default Skiller': { multiplier: 0.1, tier: 'Low Value' },
+        };
+
+        function getGrandCharmGrade(finalScore) {
+            if (finalScore >= 4.5) return { grade: "GODLY SKILLER (LCS)", color: "text-red-500", desc: "Perfect or near-perfect 40+ Life Skiller. Ultimate trade value." };
+            if (finalScore >= 3.5) return { grade: "HIGH LIFE/FHR SKILLER", color: "text-blue-400", desc: "A top-tier secondary roll on a desirable skiller (e.g., 35+ Life / 12 FHR)." };
+            if (finalScore >= 2.5) return { grade: "SOLID SKILLER", color: "text-green-400", desc: "A mid-level Life roll (25+) or niche physical (Max/AR) on a high-demand skiller." };
+            if (finalScore >= 1.0) return { grade: "USABLE SKILLER", color: "text-yellow-400", desc: "A valuable S-tier plain skiller or a low-life roll (10-20 Life)." };
+            return { grade: "LOW VALUE", color: "text-gray-500", desc: "Plain skiller on a low-demand class/tree, or low secondary affix rolls." };
+        }
+
+        function calculateGrandCharmScore() {
+            const itemType = 'GrandCharm';
+            const skillTree = document.getElementById('gc_skill_tree').value;
+            const life = getInputValue('gc_life');
+            const fhr = getInputValue('gc_fhr');
+            const maxDam = getInputValue('gc_max_damage');
+            const ar = getInputValue('gc_ar');
+            const mf = getInputValue('gc_mf');
+            const gf = getInputValue('gc_gf');
+            
+            const tierData = SKILL_TIERS[skillTree] || SKILL_TIERS['Default Skiller'];
+            const multiplier = tierData.multiplier;
+
+            let rawScore = 0;
+            let breakdown = [];
+            let affixFound = false;
+            let primaryAffixLabel = 'Plain Skiller';
+
+            // 1. Determine raw score based on secondary affix (Max 5.0)
+
+            // A. Life (Highest Value)
+            if (life > 0) {
+                affixFound = true;
+                const ratio = life / MAX_ROLLS.gc_life; // Max 1.0
+                rawScore = Math.max(rawScore, 5.0 * ratio);
+                primaryAffixLabel = `Life (+${life})`;
+            }
+
+            // B. FHR (Next Highest Value for specific builds)
+            if (fhr > 0) {
+                affixFound = true;
+                if (fhr === MAX_ROLLS.gc_fhr) {
+                    rawScore = Math.max(rawScore, 2.5); // Perfect FHR is a solid 2.5 raw score
+                } else if (fhr >= 9) {
+                    rawScore = Math.max(rawScore, 1.5);
+                }
+                if (fhr > 0 && primaryAffixLabel === 'Plain Skiller') primaryAffixLabel = `FHR (+${fhr}%)`;
+            }
+
+            // C. Max Damage / AR (Physical Skillers)
+            if (maxDam > 0 && ar > 0) {
+                affixFound = true;
+                const damRatio = maxDam / MAX_ROLLS.gc_max_damage; // Max 1.0
+                const arRatio = ar / MAX_ROLLS.gc_ar; // Max 1.0
+                // Score 2.0 for perfect Max/AR, scaling down
+                const maxArScore = 2.0 * (damRatio * 0.5 + arRatio * 0.5); 
+                rawScore = Math.max(rawScore, maxArScore);
+                if (primaryAffixLabel === 'Plain Skiller') primaryAffixLabel = `Max Damage/AR (+${maxDam}/${ar})`;
+            }
+
+            // D. MF/GF (Niche/Lower Value)
+            if (mf > 0) {
+                 affixFound = true;
+                if (mf === MAX_ROLLS.gc_mf) {
+                    rawScore = Math.max(rawScore, 1.0);
+                } else if (mf >= 30) {
+                     rawScore = Math.max(rawScore, 0.5);
+                }
+                if (mf > 0 && primaryAffixLabel === 'Plain Skiller') primaryAffixLabel = `Magic Find (+${mf}%)`;
+            }
+            if (gf > 0) {
+                affixFound = true;
+                if (gf === MAX_ROLLS.gc_gf) {
+                    rawScore = Math.max(rawScore, 0.8);
+                } else if (gf >= 60) {
+                    rawScore = Math.max(rawScore, 0.4);
+                }
+                 if (gf > 0 && primaryAffixLabel === 'Plain Skiller') primaryAffixLabel = `Gold Find (+${gf}%)`;
+            }
+
+            // E. Plain Skiller (No secondary affix)
+            if (!affixFound) {
+                rawScore = 0.5; // Base value for a plain skiller
+                primaryAffixLabel = 'Plain Skiller';
+            }
+
+            // 2. Apply Skill Tree Multiplier
+            const finalScore = rawScore * multiplier;
+            
+            const gradeData = getGrandCharmGrade(finalScore);
+            const estimatedValue = getEstimatedValue(finalScore, itemType, { multiplier });
+
+            // Build breakdown list for display
+            let breakdownHtml = `
+                <ul class="space-y-1 text-sm text-gray-300">
+                    <li class="flex justify-between items-center py-0.5 border-b border-gray-700/50">
+                        <span class="font-semibold text-d2-gold">+1 Skill Tree: ${skillTree}</span>
+                        <span class="text-white">${tierData.tier} (x${multiplier.toFixed(1)} Value)</span>
+                    </li>
+                    <li class="flex justify-between items-center py-0.5 border-b border-gray-700/50">
+                        <span class="font-semibold text-d2-gold">Secondary Affix: ${primaryAffixLabel}</span>
+                        <span class="${rawScore > 0.5 ? 'text-green-400' : 'text-gray-500'} font-mono">${rawScore.toFixed(1)} Base Pts</span>
+                    </li>
+                </ul>
+                <p class="text-sm italic mt-4 text-gray-400 text-center">
+                    Final Value Score is **Base Points × Tier Multiplier**.
+                </p>
+            `;
+
+            displayResult(finalScore.toFixed(1), itemType, breakdownHtml, gradeData, estimatedValue);
         }
 
         // --- RARE ITEM SCORING LOGIC ---
@@ -498,7 +828,11 @@
             if (itemType === 'Torch') {
                 calculateTorchRoll();
             } else if (itemType === 'Annihilus') {
-                calculateAnniRoll(); // New
+                calculateAnniRoll();
+            } else if (itemType === 'SmallCharm') {
+                calculateSmallCharmScore(); 
+            } else if (itemType === 'GrandCharm') {
+                calculateGrandCharmScore(); // NEW
             } else if (ITEM_AFFIXES[itemType]) {
                 calculateRareScore();
             } else {
@@ -517,7 +851,14 @@
             } else if (itemType === 'Annihilus') {
                 scoreLabel = 'Annihilus Total Score (20/20/10)';
                 scoreMax = score + ' / 50';
-            } else {
+            } else if (itemType === 'SmallCharm') {
+                scoreLabel = 'Small Charm Combination Score';
+                scoreMax = score + ' / 5.0'; // Max raw score
+            } else if (itemType === 'GrandCharm') {
+                scoreLabel = 'Grand Charm Value Score';
+                scoreMax = score; // Display final multiplied score
+            } 
+            else {
                 scoreLabel = 'Rare Item Score';
                 scoreMax = score + ' / 6.0';
             }
@@ -553,14 +894,33 @@
             itemTypeChanged(); 
             document.getElementById('item-type').addEventListener('change', itemTypeChanged);
 
-            // Bind calculateScore to torch/anni inputs (since they are always present but hidden)
+            // Bind calculateScore to special item inputs (since they are always present but hidden)
+            // Torch
             document.getElementById('torch_res').addEventListener('input', calculateScore);
             document.getElementById('torch_stats').addEventListener('input', calculateScore);
             document.getElementById('torch-class').addEventListener('change', calculateScore);
 
-            document.getElementById('anni_stats').addEventListener('input', calculateScore); // New
-            document.getElementById('anni_res').addEventListener('input', calculateScore);   // New
-            document.getElementById('anni_exp').addEventListener('input', calculateScore);    // New
+            // Annihilus
+            document.getElementById('anni_stats').addEventListener('input', calculateScore);
+            document.getElementById('anni_res').addEventListener('input', calculateScore);
+            document.getElementById('anni_exp').addEventListener('input', calculateScore);
+
+            // Small Charm
+            document.getElementById('sc_life').addEventListener('input', calculateScore); 
+            document.getElementById('sc_all_res').addEventListener('input', calculateScore); 
+            document.getElementById('sc_mf').addEventListener('input', calculateScore); 
+            document.getElementById('sc_single_res').addEventListener('input', calculateScore); 
+            document.getElementById('sc_max_damage').addEventListener('input', calculateScore); 
+            document.getElementById('sc_ar').addEventListener('input', calculateScore); 
+            
+            // Grand Charm (NEW)
+            document.getElementById('gc_skill_tree').addEventListener('change', calculateScore);
+            document.getElementById('gc_life').addEventListener('input', calculateScore);
+            document.getElementById('gc_fhr').addEventListener('input', calculateScore);
+            document.getElementById('gc_max_damage').addEventListener('input', calculateScore);
+            document.getElementById('gc_ar').addEventListener('input', calculateScore);
+            document.getElementById('gc_mf').addEventListener('input', calculateScore);
+            document.getElementById('gc_gf').addEventListener('input', calculateScore);
         });
     </script>
 
@@ -570,7 +930,7 @@
             Diablo 2 Item Valuation Scroll
         </h1>
         <p class="text-center text-gray-400 mb-6 text-lg">
-            Rare (6-Point), Unique Torch, & Annihilus Scoring.
+            Rare (6-Point), Unique Torch, Annihilus, & Skill Charms Scoring.
         </p>
 
         <!-- Item Type Selection -->
@@ -585,6 +945,8 @@
                 <option value="Belt">Rare Belt</option>
                 <option value="Torch">Hellfire Torch (Unique)</option>
                 <option value="Annihilus">Annihilus (Unique Charm)</option>
+                <option value="SmallCharm">Small Charm (SC)</option>
+                <option value="GrandCharm">Grand Charm (GC)</option> <!-- NEW -->
             </select>
         </div>
 
@@ -627,7 +989,7 @@
                 </p>
             </div>
 
-            <!-- 3. ANNIHILUS INPUTS (New, Hidden by default) -->
+            <!-- 3. ANNIHILUS INPUTS (Hidden by default) -->
             <div id="anni-inputs-container" class="hidden">
                 <h3 class="text-xl stat-label text-center mb-4">Annihilus Rolls (1/10/5 minimum)</h3>
                 <div class="grid grid-cols-3 gap-4">
@@ -646,6 +1008,91 @@
                 </div>
                 <p class="text-sm italic mt-4 text-gray-400 text-center border-t border-gray-700 pt-2">
                     Annihilus always grants +1 to All Skills. Total Score is based on (Stats + Res + Exp).
+                </p>
+            </div>
+            
+            <!-- 4. SMALL CHARM INPUTS (Hidden by default) -->
+            <div id="sc-inputs-container" class="hidden">
+                <h3 class="text-xl stat-label text-center mb-4">Small Charm (SC) Rolls</h3>
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                    <div class="col-span-1">
+                        <label for="sc_life" class="stat-label block">Life (Max 20)</label>
+                        <input type="number" id="sc_life" min="0" max="20" placeholder="0" class="w-full">
+                    </div>
+                    <div class="col-span-1">
+                        <label for="sc_all_res" class="stat-label block">All Res (Max 5%)</label>
+                        <input type="number" id="sc_all_res" min="0" max="5" placeholder="0" class="w-full">
+                    </div>
+                    <div class="col-span-1">
+                        <label for="sc_single_res" class="stat-label block">Single Res (Max 11%)</label>
+                        <input type="number" id="sc_single_res" min="0" max="11" placeholder="0" class="w-full">
+                    </div>
+                    <div class="col-span-1">
+                        <label for="sc_mf" class="stat-label block">Magic Find (Max 7%)</label>
+                        <input type="number" id="sc_mf" min="0" max="7" placeholder="0" class="w-full">
+                    </div>
+                     <div class="col-span-1">
+                        <label for="sc_max_damage" class="stat-label block">Max Damage (Max 3)</label>
+                        <input type="number" id="sc_max_damage" min="0" max="3" placeholder="0" class="w-full">
+                    </div>
+                    <div class="col-span-1">
+                        <label for="sc_ar" class="stat-label block">Attack Rating (Max 20)</label>
+                        <input type="number" id="sc_ar" min="0" max="20" placeholder="0" class="w-full">
+                    </div>
+                </div>
+                <p class="text-sm italic mt-4 text-red-400 text-center border-t border-gray-700 pt-2">
+                    **Enter ONLY the highest rolled primary stat.** SCs generally only have **two** valuable affixes max.
+                </p>
+            </div>
+            
+            <!-- 5. GRAND CHARM INPUTS (NEW - Hidden by default) -->
+            <div id="gc-inputs-container" class="hidden">
+                <h3 class="text-xl stat-label text-center mb-4">Grand Charm (GC) Rolls (+1 Skiller)</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <!-- Skill Tree Selection -->
+                    <div class="col-span-full">
+                        <label for="gc_skill_tree" class="stat-label block">Skill Tree (+1 Skill)</label>
+                        <select id="gc_skill_tree" class="w-full" onchange="calculateScore()">
+                            <option value="Sorc Lightning">Sorceress - Lightning (S-Tier)</option>
+                            <option value="Sorc Cold">Sorceress - Cold (S-Tier)</option>
+                            <option value="Pala Combat">Paladin - Combat (S-Tier)</option>
+                            <option value="Sorc Fire">Sorceress - Fire (S-Tier)</option>
+                            <option value="Amazon Javelin">Amazon - Javelin (A-Tier)</option>
+                            <option value="Necro Poison">Necromancer - Poison (A-Tier)</option>
+                            <option value="Barb Combat">Barbarian - Combat (A-Tier)</option>
+                            <option value="Druid Elemental">Druid - Elemental (A-Tier)</option>
+                            <option value="Assa Traps">Assassin - Traps (A-Tier)</option>
+                            <option value="Default Skiller">Low Value / Niche Tree (B/C-Tier)</option>
+                        </select>
+                    </div>
+                    <!-- Secondary Affix Inputs -->
+                    <div class="col-span-1">
+                        <label for="gc_life" class="stat-label block">Life (Max 45)</label>
+                        <input type="number" id="gc_life" min="0" max="45" placeholder="0" class="w-full">
+                    </div>
+                    <div class="col-span-1">
+                        <label for="gc_fhr" class="stat-label block">FHR (Max 12%)</label>
+                        <input type="number" id="gc_fhr" min="0" max="12" placeholder="0" class="w-full">
+                    </div>
+                    <div class="col-span-1">
+                        <label for="gc_max_damage" class="stat-label block">Max Damage (Max 10)</label>
+                        <input type="number" id="gc_max_damage" min="0" max="10" placeholder="0" class="w-full">
+                    </div>
+                    <div class="col-span-1">
+                        <label for="gc_ar" class="stat-label block">Attack Rating (Max 76)</label>
+                        <input type="number" id="gc_ar" min="0" max="76" placeholder="0" class="w-full">
+                    </div>
+                    <div class="col-span-1">
+                        <label for="gc_mf" class="stat-label block">Magic Find (Max 40%)</label>
+                        <input type="number" id="gc_mf" min="0" max="40" placeholder="0" class="w-full">
+                    </div>
+                    <div class="col-span-1">
+                        <label for="gc_gf" class="stat-label block">Gold Find (Max 80%)</label>
+                        <input type="number" id="gc_gf" min="0" max="80" placeholder="0" class="w-full">
+                    </div>
+                </div>
+                <p class="text-sm italic mt-4 text-red-400 text-center border-t border-gray-700 pt-2">
+                    **Enter ONLY the highest secondary affix roll** (Life is the highest value).
                 </p>
             </div>
 
@@ -670,6 +1117,7 @@
     </div>
 
 </body>
+
 
 
 
