@@ -85,25 +85,30 @@
             // Item-Specific Affixes
             fcr_ring: 10,
             fcr_amulet: 20,
+            plus_skills_amulet: 2, // +2 Class/Tree skills on Amulets
             mana: 90,
             ar: 120,
-            life_leech: 8,
-            mana_leech: 6,
+            life_leech: 8, // Max LL on Ring/Gloves
+            mana_leech: 6, // Max ML on Ring/Gloves
             replenish_life: 9,
 
-            plus_skills: 2, // +2 Class/Tree skills on Amulets
+            // Glove Specific Affixes
+            plus_skills_gloves: 2, // +2 Single Tree skills on Gloves
+            crushing_blow_gloves: 10, // Max 10% crushing blow on Rare Gloves
+            ias_gloves: 20, // Increased Attack Speed on Gloves
+            max_damage_gloves: 3, // Max damage for Java/Bow Gloves
+
+            // Boot Specific Affixes
             frw: 30, // Faster Run/Walk on Boots
             fhr: 10, // Faster Hit Recovery on Boots
-            ias_gloves: 20, // Increased Attack Speed on Gloves
-            dual_leech: 8, // Life Leech max on Gloves
-            max_damage_gloves: 3, // Max damage for Java/Bow Gloves
         };
 
         // Define which affixes are possible and valuable for each item type
         const ITEM_AFFIXES = {
             Ring: ['fcr_ring', 'str', 'dex', 'life', 'mana', 'ar', 'all_res', 'life_leech', 'mana_leech', 'replenish_life', 'fire_res', 'cold_res', 'light_res', 'poison_res'],
-            Amulet: ['fcr_amulet', 'plus_skills', 'str', 'dex', 'life', 'mana', 'all_res', 'life_leech', 'mana_leech', 'fire_res', 'cold_res', 'light_res', 'poison_res'],
-            Gloves: ['ias_gloves', 'str', 'dex', 'life', 'mana', 'dual_leech', 'fire_res', 'cold_res', 'light_res', 'poison_res', 'max_damage_gloves'],
+            Amulet: ['fcr_amulet', 'plus_skills_amulet', 'str', 'dex', 'life', 'mana', 'all_res', 'life_leech', 'mana_leech', 'fire_res', 'cold_res', 'light_res', 'poison_res'],
+            // UPDATED: Replaced 'dual_leech' with separate 'life_leech' and 'mana_leech'
+            Gloves: ['ias_gloves', 'str', 'dex', 'life', 'mana', 'life_leech', 'mana_leech', 'fire_res', 'cold_res', 'light_res', 'poison_res', 'max_damage_gloves', 'crushing_blow_gloves', 'plus_skills_gloves'],
             Boots: ['frw', 'fhr', 'life', 'mana', 'fire_res', 'cold_res', 'light_res', 'poison_res'],
             // Weapons and Armor are too complex for a generalized score, focusing on high-value accessories/clothing
         };
@@ -125,11 +130,13 @@
             'fcr_amulet': { label: 'Faster Cast Rate (FCR)', max: MAX_ROLLS.fcr_amulet, unit: '%', type: 'number', mapTo: 'fcr' },
 
             // Amulet Specific
-            'plus_skills': { label: '+ Skills (Class/Tree)', max: MAX_ROLLS.plus_skills, unit: '', type: 'number' },
+            'plus_skills_amulet': { label: '+ Skills (Class/Tree)', max: MAX_ROLLS.plus_skills_amulet, unit: '', type: 'number' },
             
             // Gloves Specific
+            'plus_skills_gloves': { label: '+ Skills (Single Tree)', max: MAX_ROLLS.plus_skills_gloves, unit: '', type: 'number' },
+            'crushing_blow_gloves': { label: 'Crushing Blow (CB)', max: MAX_ROLLS.crushing_blow_gloves, unit: '%', type: 'number' },
             'ias_gloves': { label: 'Increased Attack Speed (IAS)', max: MAX_ROLLS.ias_gloves, unit: '%', type: 'number' },
-            'dual_leech': { label: 'Dual Leech (LL or ML)', max: MAX_ROLLS.dual_leech, unit: '%', type: 'number' }, // Treated as one point if both are high
+            // Removed 'dual_leech' as it's replaced by separate 'life_leech' and 'mana_leech'
             'max_damage_gloves': { label: '+Max Damage', max: MAX_ROLLS.max_damage_gloves, unit: '', type: 'number' },
 
             // Boots Specific
@@ -247,10 +254,6 @@
                 
                 if (value > 0) {
                     let maxRoll = config.max;
-
-                    // Adjust max roll for FCR based on item type
-                    if (id === 'fcr_ring') maxRoll = MAX_ROLLS.fcr_ring;
-                    if (id === 'fcr_amulet') maxRoll = MAX_ROLLS.fcr_amulet;
                     
                     const score = scoreAffix(value, maxRoll);
                     
@@ -340,6 +343,7 @@
             Generalized 6-Point Valuation for Rare Accessories & Clothing.
         </p>
 
+        <!-- Item Type Selection -->
         <div class="mb-6">
             <label for="item-type" class="stat-label block mb-2">Select Item Type</label>
             <select id="item-type" class="w-full p-2 bg-d2-dark border border-gray-600 rounded-lg text-white font-semibold shadow-inner">
@@ -350,24 +354,28 @@
             </select>
         </div>
 
+        <!-- Dynamic Input Form -->
         <form id="ring-form">
             <div id="affix-inputs-container">
-                </div>
+                <!-- Dynamic inputs are rendered here -->
+            </div>
         </form>
 
+        <!-- Result Display -->
         <div id="result" class="result-box mt-8 p-4 rounded-xl">
-            </div>
+            <!-- Score and Grade will be inserted here by JavaScript -->
+        </div>
 
     </div>
 
+    <!-- Kaspa Links -->
     <div class="mt-8 text-center w-full max-w-xl">
-        <a href="kaspa:kaspa:qprxkkvetjgxpsz4c7st887j3tdcq2yexhtlh2myutu9t9f76d70ws5sgq82l" class="kaspa-link underline block mb-1" title="Kaspa Donation Address">
-            Donate with Kaspa
+        <a href="kaspa:kaspa:qp4m9g70d7vpsjnmhftg90967x6h9290k424j259837m5g6w902h7s60q9w7s" class="kaspa-link underline block mb-1" title="Kaspa Donation Address">
+	Donate with Kaspa @ kaspa:qprxkkvetjgxpsz4c7st887j3tdcq2yexhtlh2myutu9t9f76d70ws5sgq82l or grandpayri.kas
         </a>
-        <a href="https://kaspa.org/technology/blockdag/" target="_blank" class="kaspa-link underline block">
+        <a href="https://kaspa.org/" target="_blank" class="kaspa-link underline block">
             What's Kaspa? (The BlockDAG Revolution)
         </a>
     </div>
 
 </body>
-</html>
