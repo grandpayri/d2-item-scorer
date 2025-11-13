@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diablo 2 Rare Item Scorer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'd2-gold': '#ffcc66',
+                        'd2-dark': '#1e1e1e',
+                        'd2-red': '#cc3333',
+                    },
+                    fontFamily: {
+                        'inter': ['Inter', 'sans-serif'],
+                        'diablo': ['Georgia', 'serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #2c2c2c;
+            color: #d4d4d4;
+            font-family: 'inter', sans-serif;
+            min-height: 100vh;
+        }
+        .item-card {
+            background-color: #1a1a1a;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 204, 102, 0.2);
+        }
+        .stat-label {
+            color: #ffcc66;
+            font-size: 0.85rem;
+        }
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type="number"] {
+            -moz-appearance: textfield;
+            text-align: right;
+            border-radius: 0.375rem;
+            border: 1px solid #444;
+            background-color: #333;
+            color: white;
+            padding: 0.5rem;
+        }
+        .result-box {
+            background: linear-gradient(90deg, #1e1e1e 0%, #3a3a3a 100%);
+            border: 2px solid #ffcc66;
+        }
+        .perfect-roll {
+            color: #66ccff; /* Blue/Cyan for perfect rolls */
+            font-weight: 600;
+        }
+        .kaspa-link {
+            font-size: 0.7rem;
+            color: #6a6a6a;
+            transition: color 0.2s;
+        }
+        .kaspa-link:hover {
+            color: #ffcc66;
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center p-4 sm:p-8">
+    <script>
+        // --- CORE CONFIGURATION & SCORING LOGIC ---
+
+        const MAX_ROLLS = {
+            // Universal Affixes
+            str: 20,
+            dex: 15,
+            life: 40,
+            all_res: 11,
+            single_res: 30, // Max for a single resistance mod (Fire, Cold, Light, Poison)
+            
+            // Item-Specific Affixes
+            fcr_ring: 10,
+            fcr_amulet: 20,
+            mana: 90,
+            ar: 120,
+            life_leech: 8,
+            mana_leech: 6,
+            replenish_life: 9,
+
+            plus_skills: 2, // +2 Class/Tree skills on Amulets
+            frw: 30, // Faster Run/Walk on Boots
+            fhr: 10, // Faster Hit Recovery on Boots
+            ias_gloves: 20, // Increased Attack Speed on Gloves
+            dual_leech: 8, // Life Leech max on Gloves
+            max_damage_gloves: 3, // Max damage for Java/Bow Gloves
+        };
+
+        // Define which affixes are possible and valuable for each item type
+        const ITEM_AFFIXES = {
+            Ring: ['fcr_ring', 'str', 'dex', 'life', 'mana', 'ar', 'all_res', 'life_leech', 'mana_leech', 'replenish_life', 'fire_res', 'cold_res', 'light_res', 'poison_res'],
+            Amulet: ['fcr_amulet', 'plus_skills', 'str', 'dex', 'life', 'mana', 'all_res', 'life_leech', 'mana_leech', 'fire_res', 'cold_res', 'light_res', 'poison_res'],
+            Gloves: ['ias_gloves', 'str', 'dex', 'life', 'mana', 'dual_leech', 'fire_res', 'cold_res', 'light_res', 'poison_res', 'max_damage_gloves'],
+            Boots: ['frw', 'fhr', 'life', 'mana', 'fire_res', 'cold_res', 'light_res', 'poison_res'],
+            // Weapons and Armor are too complex for a generalized score, focusing on high-value accessories/clothing
+        };
+
+        const INPUT_FIELDS = {
+            // Ring / Universal
+            'str': { label: 'Strength', max: MAX_ROLLS.str, unit: '', type: 'number' },
+            'dex': { label: 'Dexterity', max: MAX_ROLLS.dex, unit: '', type: 'number' },
+            'life': { label: 'Life', max: MAX_ROLLS.life, unit: '', type: 'number' },
+            'mana': { label: 'Mana', max: MAX_ROLLS.mana, unit: '', type: 'number' },
+            'all_res': { label: 'All Resistances', max: MAX_ROLLS.all_res, unit: '%', type: 'number' },
+            'replenish_life': { label: 'Replenish Life', max: MAX_ROLLS.replenish_life, unit: '', type: 'number' },
+            'ar': { label: 'Attack Rating (AR)', max: MAX_ROLLS.ar, unit: '', type: 'number' },
+            'life_leech': { label: 'Life Leech', max: MAX_ROLLS.life_leech, unit: '%', type: 'number' },
+            'mana_leech': { label: 'Mana Leech', max: MAX_ROLLS.mana_leech, unit: '%', type: 'number' },
+            
+            // Ring/Amulet FCR
+            'fcr_ring': { label: 'Faster Cast Rate (FCR)', max: MAX_ROLLS.fcr_ring, unit: '%', type: 'number', mapTo: 'fcr' },
+            'fcr_amulet': { label: 'Faster Cast Rate (FCR)', max: MAX_ROLLS.fcr_amulet, unit: '%', type: 'number', mapTo: 'fcr' },
+
+            // Amulet Specific
+            'plus_skills': { label: '+ Skills (Class/Tree)', max: MAX_ROLLS.plus_skills, unit: '', type: 'number' },
+            
+            // Gloves Specific
+            'ias_gloves': { label: 'Increased Attack Speed (IAS)', max: MAX_ROLLS.ias_gloves, unit: '%', type: 'number' },
+            'dual_leech': { label: 'Dual Leech (LL or ML)', max: MAX_ROLLS.dual_leech, unit: '%', type: 'number' }, // Treated as one point if both are high
+            'max_damage_gloves': { label: '+Max Damage', max: MAX_ROLLS.max_damage_gloves, unit: '', type: 'number' },
+
+            // Boots Specific
+            'frw': { label: 'Faster Run/Walk (FRW)', max: MAX_ROLLS.frw, unit: '%', type: 'number' },
+            'fhr': { label: 'Faster Hit Recovery (FHR)', max: MAX_ROLLS.fhr, unit: '%', type: 'number' },
+            
+            // Single Resistances (use separate inputs for clarity but a combined max roll)
+            'fire_res': { label: 'Fire Resistance', max: MAX_ROLLS.single_res, unit: '%', type: 'number', isSingleRes: true },
+            'cold_res': { label: 'Cold Resistance', max: MAX_ROLLS.single_res, unit: '%', type: 'number', isSingleRes: true },
+            'light_res': { label: 'Lightning Resistance', max: MAX_ROLLS.single_res, unit: '%', type: 'number', isSingleRes: true },
+            'poison_res': { label: 'Poison Resistance', max: MAX_ROLLS.single_res, unit: '%', type: 'number', isSingleRes: true },
+        };
+        
+        // --- UTILITY FUNCTIONS ---
+
+        /**
+         * Calculates the score for a single affix based on the 6pt system rules.
+         * 1 Point: >= 66% of max roll.
+         * 0.5 Point: 33% to < 66% of max roll.
+         * 0 Points: < 33% of max roll.
+         * @param {number} value - The actual roll value.
+         * @param {number} max - The maximum possible roll.
+         * @returns {number} The score (0, 0.5, or 1).
+         */
+        function scoreAffix(value, max) {
+            if (value <= 0 || max <= 0) return 0;
+            const valueRatio = value / max;
+            if (valueRatio >= 0.66) return 1.0;
+            if (valueRatio >= 0.33) return 0.5;
+            return 0;
+        }
+
+        function getInputValue(id) {
+            const element = document.getElementById(id);
+            const value = parseInt(element.value, 10);
+            return isNaN(value) ? 0 : value;
+        }
+
+        // --- DYNAMIC UI MANAGEMENT ---
+
+        function renderInputs(itemType) {
+            const container = document.getElementById('affix-inputs-container');
+            container.innerHTML = '';
+            const affixes = ITEM_AFFIXES[itemType];
+            
+            const generalMods = affixes.filter(a => !INPUT_FIELDS[a].isSingleRes);
+            const singleResMods = affixes.filter(a => INPUT_FIELDS[a].isSingleRes);
+
+            // 1. Render General Mods
+            let generalHtml = '<div class="grid grid-cols-2 gap-4">';
+            generalMods.forEach(id => {
+                const config = INPUT_FIELDS[id];
+                generalHtml += `
+                    <div class="col-span-2 sm:col-span-1" data-affix-id="${id}">
+                        <label for="${id}" class="stat-label block">${config.label} (Max ${config.max}${config.unit})</label>
+                        <input type="number" id="${id}" min="0" max="${config.max}" placeholder="0" class="w-full" oninput="calculateScore()">
+                    </div>
+                `;
+            });
+            generalHtml += '</div>';
+
+            // 2. Render Single Resistances
+            let resHtml = '';
+            if (singleResMods.length > 0) {
+                resHtml = `
+                    <div class="col-span-2 pt-4 border-t border-gray-700 mt-4">
+                        <p class="stat-label text-center mb-2">Single Resistances (Max ${MAX_ROLLS.single_res}%)</p>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                            ${singleResMods.map(id => {
+                                const config = INPUT_FIELDS[id];
+                                return `
+                                    <div data-affix-id="${id}">
+                                        <label for="${id}" class="stat-label block text-xs">${config.label}</label>
+                                        <input type="number" id="${id}" min="0" max="${config.max}" placeholder="0" class="w-full" oninput="calculateScore()">
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            container.innerHTML = generalHtml + resHtml;
+
+            // Clear result and score when item type changes
+            document.getElementById('result').innerHTML = '';
+        }
+
+        function itemTypeChanged() {
+            const itemType = document.getElementById('item-type').value;
+            renderInputs(itemType);
+            calculateScore();
+        }
+
+        // --- MAIN CALCULATION ---
+
+        function calculateScore() {
+            const itemType = document.getElementById('item-type').value;
+            if (!itemType || !ITEM_AFFIXES[itemType]) {
+                document.getElementById('result').innerHTML = '<p class="text-center text-gray-500">Please select an item type.</p>';
+                return;
+            }
+
+            const affixesToScore = [];
+            const inputValues = {};
+
+            // 1. Process all active input fields
+            const activeAffixes = ITEM_AFFIXES[itemType];
+
+            activeAffixes.forEach(id => {
+                const config = INPUT_FIELDS[id];
+                const value = getInputValue(id);
+                
+                inputValues[id] = value;
+                
+                if (value > 0) {
+                    let maxRoll = config.max;
+
+                    // Adjust max roll for FCR based on item type
+                    if (id === 'fcr_ring') maxRoll = MAX_ROLLS.fcr_ring;
+                    if (id === 'fcr_amulet') maxRoll = MAX_ROLLS.fcr_amulet;
+                    
+                    const score = scoreAffix(value, maxRoll);
+                    
+                    if (score > 0) {
+                        affixesToScore.push({
+                            id: id,
+                            label: config.label,
+                            value: value,
+                            score: score,
+                            max: maxRoll,
+                            unit: config.unit,
+                        });
+                    }
+                }
+            });
+
+            // 2. Sort scores and sum the top 6 affixes
+            affixesToScore.sort((a, b) => b.score - a.score); // Highest score first
+
+            const topSixAffixes = affixesToScore.slice(0, 6);
+            const finalScore = topSixAffixes.reduce((sum, current) => sum + current.score, 0);
+
+            displayResult(finalScore.toFixed(1), itemType, topSixAffixes);
+        }
+
+        function getGrade(score) {
+            if (score >= 5.5) return { grade: "GODLY (GG)", color: "text-red-500", desc: "One of the absolute top rare items in the game. Near-perfect stats on 6 key affixes." };
+            if (score >= 5.0) return { grade: "Elite / Great Rare", color: "text-blue-400", desc: "Highly valuable, desirable for PvP or top-tier PvM. Excellent combination of stats." };
+            if (score >= 4.5) return { grade: "Very Good Item", color: "text-green-400", desc: "A strong, solid item that is sellable and highly usable for many builds." };
+            if (score >= 4.0) return { grade: "Usable / Sellable", color: "text-yellow-400", desc: "Decent rolls on key stats, perfect for mid-tier builds or early ladder/PvM." };
+            if (score >= 3.5) return { grade: "Situational", color: "text-yellow-600", desc: "Usable if it hits a key breakpoint (like FCR or FRW) but lacks overall power." };
+            return { grade: "Charsi Food", color: "text-gray-500", desc: "Generally not valuable for trade, but might be useful for self-use early in the game." };
+        }
+
+        function displayResult(finalScore, itemType, topSixAffixes) {
+            const resultDiv = document.getElementById('result');
+            const gradeData = getGrade(parseFloat(finalScore));
+
+            let breakdownHtml = '';
+
+            if (topSixAffixes.length > 0) {
+                breakdownHtml = `
+                    <ul class="space-y-1 text-sm text-gray-300">
+                        ${topSixAffixes.map(affix => {
+                            const rollText = (affix.value === affix.max && affix.max > 0) ? `<span class="perfect-roll"> (Perfect Roll!)</span>` : '';
+                            return `<li class="flex justify-between items-center py-0.5 border-b border-gray-700/50">
+                                <span class="font-semibold text-d2-gold">${affix.label}: ${affix.value}${affix.unit}</span>
+                                <span class="${affix.score === 1 ? 'text-green-400' : 'text-yellow-400'} font-mono">${affix.score.toFixed(1)} pt</span>
+                                ${rollText}
+                            </li>`;
+                        }).join('')}
+                    </ul>
+                    <p class="text-sm italic mt-4 text-gray-400">
+                        (Total is the sum of the top ${topSixAffixes.length} affixes, capped at 6.0)
+                    </p>
+                `;
+            } else {
+                breakdownHtml = `<p class="text-center text-gray-500 mt-4">Enter some stats to calculate the score for your ${itemType}!</p>`;
+            }
+
+
+            resultDiv.innerHTML = `
+                <h3 class="text-xl font-bold text-center mb-4 text-white">${finalScore} / 6.0 Points</h3>
+                <div class="p-3 mb-4 rounded-lg text-center ${gradeData.color} bg-d2-dark border-2 border-d2-gold">
+                    <p class="text-2xl font-bold">${gradeData.grade}</p>
+                    <p class="text-xs italic text-gray-400 mt-1">${gradeData.desc}</p>
+                </div>
+                <h4 class="text-lg font-semibold border-b pb-1 border-gray-600 mb-2 text-d2-gold">Top Affix Breakdown</h4>
+                ${breakdownHtml}
+            `;
+        }
+
+        // --- INITIALIZATION ---
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Set up initial inputs for Ring (default)
+            itemTypeChanged(); 
+            document.getElementById('item-type').addEventListener('change', itemTypeChanged);
+        });
+    </script>
+
+    <div class="item-card w-full max-w-xl p-6 rounded-xl shadow-lg">
+        <h1 class="text-3xl font-diablo font-bold text-center text-d2-gold mb-2">
+            Diablo 2 Rare Item Scorer
+        </h1>
+        <p class="text-center text-gray-400 mb-6 text-sm">
+            Generalized 6-Point Valuation for Rare Accessories & Clothing.
+        </p>
+
+        <div class="mb-6">
+            <label for="item-type" class="stat-label block mb-2">Select Item Type</label>
+            <select id="item-type" class="w-full p-2 bg-d2-dark border border-gray-600 rounded-lg text-white font-semibold shadow-inner">
+                <option value="Ring" selected>Rare Ring</option>
+                <option value="Amulet">Rare Amulet</option>
+                <option value="Gloves">Rare Gloves</option>
+                <option value="Boots">Rare Boots</option>
+            </select>
+        </div>
+
+        <form id="ring-form">
+            <div id="affix-inputs-container">
+                </div>
+        </form>
+
+        <div id="result" class="result-box mt-8 p-4 rounded-xl">
+            </div>
+
+    </div>
+
+    <div class="mt-8 text-center w-full max-w-xl">
+        <a href="kaspa:kaspa:qprxkkvetjgxpsz4c7st887j3tdcq2yexhtlh2myutu9t9f76d70ws5sgq82l" class="kaspa-link underline block mb-1" title="Kaspa Donation Address">
+            Donate with Kaspa
+        </a>
+        <a href="https://kaspa.org/technology/blockdag/" target="_blank" class="kaspa-link underline block">
+            What's Kaspa? (The BlockDAG Revolution)
+        </a>
+    </div>
+
+</body>
+</html>
