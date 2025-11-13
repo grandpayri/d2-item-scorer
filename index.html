@@ -106,20 +106,25 @@
             life_belt_circlet: 60, // Max life on belts and circlets
             str_belt: 30, // Max strength on belts
             fhr_belt: 24, // Max FHR on belts
+
+            // Magic Find Affixes (NEW)
+            mf_ring: 15, // Max MF on Rare Rings
+            mf_amulet_circlet: 35, // Max MF on Rare Amulets/Circlets
+            mf_other: 25, // Max MF on Rare Gloves/Boots/Belts
         };
 
         // Define which affixes are possible and valuable for each item type
         const ITEM_AFFIXES = {
-            Ring: ['fcr_ring', 'str', 'dex', 'life', 'mana', 'ar', 'all_res', 'life_leech', 'mana_leech', 'replenish_life', 'fire_res', 'cold_res', 'light_res', 'poison_res'],
-            Amulet: ['fcr_amulet', 'plus_skills_amulet', 'str', 'dex', 'life', 'mana', 'all_res', 'life_leech', 'mana_leech', 'fire_res', 'cold_res', 'light_res', 'poison_res'],
-            Gloves: ['ias_gloves', 'str', 'dex', 'life', 'mana', 'life_leech', 'mana_leech', 'fire_res', 'cold_res', 'light_res', 'poison_res', 'max_damage_gloves', 'crushing_blow_gloves', 'plus_skills_gloves'],
-            Boots: ['frw', 'fhr', 'life', 'mana', 'fire_res', 'cold_res', 'light_res', 'poison_res'],
+            Ring: ['fcr_ring', 'str', 'dex', 'life', 'mana', 'ar', 'all_res', 'life_leech', 'mana_leech', 'replenish_life', 'fire_res', 'cold_res', 'light_res', 'poison_res', 'mf_ring'],
+            Amulet: ['fcr_amulet', 'plus_skills_amulet', 'str', 'dex', 'life', 'mana', 'all_res', 'life_leech', 'mana_leech', 'fire_res', 'cold_res', 'light_res', 'poison_res', 'mf_amulet_circlet'],
+            Gloves: ['ias_gloves', 'str', 'dex', 'life', 'mana', 'life_leech', 'mana_leech', 'fire_res', 'cold_res', 'light_res', 'poison_res', 'max_damage_gloves', 'crushing_blow_gloves', 'plus_skills_gloves', 'mf_other'],
+            Boots: ['frw', 'fhr', 'life', 'mana', 'fire_res', 'cold_res', 'light_res', 'poison_res', 'mf_other'],
             
-            // Circlet: Now includes FRW, Life Leech, and Mana Leech
-            Circlet: ['fcr_amulet', 'plus_skills_amulet', 'str', 'dex', 'life_belt_circlet', 'mana', 'all_res', 'frw', 'life_leech', 'mana_leech', 'fire_res', 'cold_res', 'light_res', 'poison_res'],
+            // Circlet: Now includes FRW, Life Leech, Mana Leech, and MF
+            Circlet: ['fcr_amulet', 'plus_skills_amulet', 'str', 'dex', 'life_belt_circlet', 'mana', 'all_res', 'frw', 'life_leech', 'mana_leech', 'fire_res', 'cold_res', 'light_res', 'poison_res', 'mf_amulet_circlet'],
             
-            // Belt (Higher Life/Str/FHR rolls)
-            Belt: ['fhr_belt', 'str_belt', 'dex', 'life_belt_circlet', 'mana', 'all_res', 'fire_res', 'cold_res', 'light_res', 'poison_res'],
+            // Belt (Higher Life/Str/FHR rolls) and MF
+            Belt: ['fhr_belt', 'str_belt', 'dex', 'life_belt_circlet', 'mana', 'all_res', 'fire_res', 'cold_res', 'light_res', 'poison_res', 'mf_other'],
         };
 
         const INPUT_FIELDS = {
@@ -163,6 +168,11 @@
             'cold_res': { label: 'Cold Resistance', max: MAX_ROLLS.single_res, unit: '%', type: 'number', isSingleRes: true },
             'light_res': { label: 'Lightning Resistance', max: MAX_ROLLS.single_res, unit: '%', type: 'number', isSingleRes: true },
             'poison_res': { label: 'Poison Resistance', max: MAX_ROLLS.single_res, unit: '%', type: 'number', isSingleRes: true },
+
+            // Magic Find Inputs (NEW)
+            'mf_ring': { label: 'Magic Find', max: MAX_ROLLS.mf_ring, unit: '%', type: 'number' },
+            'mf_amulet_circlet': { label: 'Magic Find', max: MAX_ROLLS.mf_amulet_circlet, unit: '%', type: 'number' },
+            'mf_other': { label: 'Magic Find', max: MAX_ROLLS.mf_other, unit: '%', type: 'number' },
         };
         
         // --- UTILITY FUNCTIONS ---
@@ -204,17 +214,7 @@
             let generalHtml = '<div class="grid grid-cols-2 gap-4">';
             generalMods.forEach(id => {
                 const config = INPUT_FIELDS[id];
-                // Determine the correct max roll property name based on item type for dynamic display
-                let maxRollKey = id;
-                if (id === 'life_belt_circlet' || id === 'str_belt' || id === 'fhr_belt') {
-                    // Use the dedicated max roll keys
-                } else if (id === 'plus_skills_amulet' || id === 'fcr_amulet') {
-                    // Use the existing amulet/head keys
-                } else if (itemType === 'Circlet' || itemType === 'Belt') {
-                    // If it's a universal stat like 'dex' or 'mana', use its universal max roll
-                    maxRollKey = id; 
-                }
-
+                
                 generalHtml += `
                     <div class="col-span-2 sm:col-span-1" data-affix-id="${id}">
                         <label for="${id}" class="stat-label block">${config.label} (Max ${config.max}${config.unit})</label>
@@ -426,7 +426,7 @@
 
     </div>
 
-    <!-- Kaspa Links -->
+	<!-- Kaspa Links -->
     <div class="mt-8 text-center w-full max-w-xl">
 	 <a href="https://explorer.kaspa.org/addresses/kaspa:qprxkkvetjgxpsz4c7st887j3tdcq2yexhtlh2myutu9t9f76d70ws5sgq82l?page=1" target="_blank" class="kaspa-link underline block">Please consider a donation!</a></p>
 
@@ -437,6 +437,7 @@
     </div>
 
 </body>
+
 
 
 
