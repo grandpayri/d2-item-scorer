@@ -81,8 +81,8 @@
         .font-diablo {
             font-family: 'Cinzel Decorative', 'serif';
         }
-        /* Style for the torch inputs to match */
-        #torch-inputs-container select {
+        /* Style for the torch/anni inputs to match */
+        #torch-inputs-container select, #anni-inputs-container input {
             background-color: #333;
             border: 1px solid #444;
             color: white;
@@ -109,6 +109,11 @@
             // Hellfire Torch Max Rolls
             torch_res: 20, 
             torch_stats: 20, 
+            
+            // Annihilus Max Rolls
+            anni_stats: 20,
+            anni_res: 20,
+            anni_exp: 10, 
         };
 
         const ITEM_AFFIXES = {
@@ -119,10 +124,11 @@
             Circlet: ['fcr_amulet', 'plus_skills_amulet', 'str', 'dex', 'life_belt_circlet', 'mana', 'all_res', 'frw', 'life_leech', 'mana_leech', 'fire_res', 'cold_res', 'light_res', 'poison_res', 'mf_amulet_circlet'],
             Belt: ['fhr_belt', 'str_belt', 'dex', 'life_belt_circlet', 'mana', 'all_res', 'fire_res', 'cold_res', 'light_res', 'poison_res', 'mf_other'],
             Torch: ['torch_res', 'torch_stats'],
+            Annihilus: ['anni_stats', 'anni_res', 'anni_exp'], // New
         };
 
         const INPUT_FIELDS = {
-            // ... (Rare Item Inputs remain unchanged)
+            // Rare Item Inputs
             'str': { label: 'Strength', max: MAX_ROLLS.str, unit: '', type: 'number' },
             'dex': { label: 'Dexterity', max: MAX_ROLLS.dex, unit: '', type: 'number' },
             'life': { label: 'Life', max: MAX_ROLLS.life, unit: '', type: 'number' },
@@ -151,6 +157,10 @@
             'mf_ring': { label: 'Magic Find', max: MAX_ROLLS.mf_ring, unit: '%', type: 'number' },
             'mf_amulet_circlet': { label: 'Magic Find', max: MAX_ROLLS.mf_amulet_circlet, unit: '%', type: 'number' },
             'mf_other': { label: 'Magic Find', max: MAX_ROLLS.mf_other, unit: '%', type: 'number' },
+            // Annihilus Inputs (New)
+            'anni_stats': { label: 'All Attributes', max: MAX_ROLLS.anni_stats, unit: '', type: 'number' },
+            'anni_res': { label: 'All Resistances', max: MAX_ROLLS.anni_res, unit: '%', type: 'number' },
+            'anni_exp': { label: 'Experience Gained', max: MAX_ROLLS.anni_exp, unit: '%', type: 'number' },
         };
         
         // --- UTILITY FUNCTIONS ---
@@ -174,14 +184,22 @@
         function renderInputs(itemType) {
             const rareContainer = document.getElementById('affix-inputs-container');
             const torchContainer = document.getElementById('torch-inputs-container');
+            const anniContainer = document.getElementById('anni-inputs-container');
+
+            // Hide all special containers first
+            rareContainer.classList.add('hidden');
+            torchContainer.classList.add('hidden');
+            anniContainer.classList.add('hidden');
 
             if (itemType === 'Torch') {
-                rareContainer.innerHTML = '';
-                rareContainer.classList.add('hidden');
                 torchContainer.classList.remove('hidden');
-            } else {
+                rareContainer.innerHTML = '';
+            } else if (itemType === 'Annihilus') {
+                anniContainer.classList.remove('hidden');
+                rareContainer.innerHTML = '';
+            }
+            else {
                 rareContainer.classList.remove('hidden');
-                torchContainer.classList.add('hidden');
                 
                 rareContainer.innerHTML = '';
                 const affixes = ITEM_AFFIXES[itemType];
@@ -236,11 +254,10 @@
             calculateScore();
         }
         
-        // --- VALUE ESTIMATION (ADJUSTED FOR TORCH CLASS DEMAND) ---
+        // --- VALUE ESTIMATION (ADJUSTED FOR DEMAND) ---
 
         /**
          * Provides a generalized, speculative rune value based on the score and item type.
-         * For Torch, it adjusts based on class demand.
          */
         function getEstimatedValue(score, itemType, torchClass = null) {
             if (itemType === 'Torch') {
@@ -252,7 +269,7 @@
                     classTierText = "(S-Tier: High/Essential Demand)";
                     if (score >= 38) valuation = `Multiple High Runes (Jah/Ber+) ${classTierText}`; // 19/19+
                     else if (score >= 35) valuation = `Ohm - Lo Rune ${classTierText}`; // 15/20+
-                    else if (score >= 25) valuation = `Vex - Gul Rune ${classTierText}`; // 10/15+ to 15/15-
+                    else if (score >= 25) valuation = `Vex - Gul Rune ${classTierText}`; // Vex is the floor for usable Sorc/Pally
                     else valuation = `Starter/Low Vex/Gul ${classTierText}`; // Base/Low rolls still have value due to class
                 
                 // A-Tier (Moderate Demand): Necromancer, Amazon
@@ -275,8 +292,17 @@
                 }
 
                 return valuation;
+            } 
+            
+            else if (itemType === 'Annihilus') { // Annihilus Logic (Score out of 50)
+                if (score === 50) return "Top Tier High Runes (Jah/Ber+) [20/20/10]";
+                if (score >= 48) return "Lo - Sur Rune [19/20/x, 20/20/x]";
+                if (score >= 45) return "Ohm - Vex Rune [15+/15+/x]";
+                if (score >= 40) return "Gul - Ist Rune [10+/10+/x]";
+                return "Um Rune (Low/Starter Anni)";
+            }
 
-            } else { // Rare Items (score out of 6.0)
+            else { // Rare Items (score out of 6.0)
                 if (score >= 5.5) return "Multiple High Runes (Ber, Jah+)";
                 if (score >= 5.0) return "Vex - Ohm";
                 if (score >= 4.5) return "Mal - Ist";
@@ -309,7 +335,6 @@
             const maxRoll = MAX_ROLLS.torch_res + MAX_ROLLS.torch_stats; 
             
             const gradeData = getTorchGrade(totalRoll);
-            // PASS TORCH CLASS FOR VALUATION ADJUSTMENT
             const estimatedValue = getEstimatedValue(totalRoll, itemType, torchClass);
 
             // Determine roll quality text
@@ -334,6 +359,62 @@
                 </ul>
                 <p class="text-sm italic mt-4 text-gray-400 text-center">
                     Total Hellfire Torch Score: ${totalRoll} / ${maxRoll}
+                </p>
+            `;
+            
+            displayResult(totalRoll, itemType, breakdownHtml, gradeData, estimatedValue);
+        }
+
+        // --- ANNIHILUS SCORING LOGIC (New) ---
+
+        function getAnniGrade(totalRoll) {
+            if (totalRoll === 50) return { grade: "PERFECT (20/20/10)", color: "text-red-500", desc: "The ultimate charm. Flawless rolls on all stats." };
+            if (totalRoll >= 48) return { grade: "NEAR PERFECT", color: "text-blue-400", desc: "One of the best possible Annis, commanding top-tier prices." };
+            if (totalRoll >= 45) return { grade: "HIGH TIER", color: "text-green-400", desc: "Excellent rolls, hugely valuable and coveted." };
+            if (totalRoll >= 40) return { grade: "MID TIER", color: "text-yellow-400", desc: "Solid performance, highly useful and holds significant trade value." };
+            if (totalRoll >= 30) return { grade: "LOW TIER", color: "text-yellow-600", desc: "A functional Annihilus, great for self-use and a starting point for trade." };
+            return { grade: "STARTER ANNI", color: "text-gray-500", desc: "+1 to all skills is always good, but the rolls are low." };
+        }
+
+        function calculateAnniRoll() {
+            const itemType = 'Annihilus';
+            const statsRoll = getInputValue('anni_stats');
+            const resRoll = getInputValue('anni_res');
+            const expRoll = getInputValue('anni_exp');
+            
+            const totalRoll = statsRoll + resRoll + expRoll;
+            const maxRoll = MAX_ROLLS.anni_stats + MAX_ROLLS.anni_res + MAX_ROLLS.anni_exp; // 50
+            
+            const gradeData = getAnniGrade(totalRoll);
+            const estimatedValue = getEstimatedValue(totalRoll, itemType);
+
+            // Determine roll quality text
+            const statsPerfect = statsRoll === MAX_ROLLS.anni_stats;
+            const resPerfect = resRoll === MAX_ROLLS.anni_res;
+            const expPerfect = expRoll === MAX_ROLLS.anni_exp;
+            
+            // Build the result HTML
+            let breakdownHtml = `
+                <ul class="space-y-1 text-sm text-gray-300">
+                    <li class="flex justify-between items-center py-0.5 border-b border-gray-700/50">
+                        <span class="font-semibold text-d2-gold">Skills: +1 (Fixed)</span>
+                        <span>Unique Modifier</span>
+                    </li>
+                    <li class="flex justify-between items-center py-0.5 border-b border-gray-700/50">
+                        <span class="font-semibold text-d2-gold">Attributes: +${statsRoll}</span>
+                        ${statsPerfect ? '<span class="perfect-roll"> (Perfect 20!)</span>' : ''}
+                    </li>
+                    <li class="flex justify-between items-center py-0.5 border-b border-gray-700/50">
+                        <span class="font-semibold text-d2-gold">All Resistances: +${resRoll}%</span>
+                        ${resPerfect ? '<span class="perfect-roll"> (Perfect 20!)</span>' : ''}
+                    </li>
+                    <li class="flex justify-between items-center py-0.5 border-b border-gray-700/50">
+                        <span class="font-semibold text-d2-gold">Experience Gained: +${expRoll}%</span>
+                        ${expPerfect ? '<span class="perfect-roll"> (Perfect 10!)</span>' : ''}
+                    </li>
+                </ul>
+                <p class="text-sm italic mt-4 text-gray-400 text-center">
+                    Total Annihilus Score: ${totalRoll} / ${maxRoll}
                 </p>
             `;
             
@@ -416,6 +497,8 @@
 
             if (itemType === 'Torch') {
                 calculateTorchRoll();
+            } else if (itemType === 'Annihilus') {
+                calculateAnniRoll(); // New
             } else if (ITEM_AFFIXES[itemType]) {
                 calculateRareScore();
             } else {
@@ -425,8 +508,19 @@
 
         function displayResult(score, itemType, breakdownHtml, gradeData, estimatedValue) {
             const resultDiv = document.getElementById('result');
-            const scoreLabel = itemType === 'Torch' ? 'Torch Roll Score' : 'Rare Item Score';
-            const scoreMax = itemType === 'Torch' ? score + ' / 40' : score + ' / 6.0';
+            let scoreLabel = 'Item Score';
+            let scoreMax;
+
+            if (itemType === 'Torch') {
+                scoreLabel = 'Torch Roll Score';
+                scoreMax = score + ' / 40';
+            } else if (itemType === 'Annihilus') {
+                scoreLabel = 'Annihilus Total Score (20/20/10)';
+                scoreMax = score + ' / 50';
+            } else {
+                scoreLabel = 'Rare Item Score';
+                scoreMax = score + ' / 6.0';
+            }
 
             resultDiv.innerHTML = `
                 <h3 class="text-xl font-bold text-center mb-4 text-white">${scoreMax}</h3>
@@ -459,10 +553,14 @@
             itemTypeChanged(); 
             document.getElementById('item-type').addEventListener('change', itemTypeChanged);
 
-            // Bind calculateScore to torch inputs (since they are always present but hidden)
+            // Bind calculateScore to torch/anni inputs (since they are always present but hidden)
             document.getElementById('torch_res').addEventListener('input', calculateScore);
             document.getElementById('torch_stats').addEventListener('input', calculateScore);
             document.getElementById('torch-class').addEventListener('change', calculateScore);
+
+            document.getElementById('anni_stats').addEventListener('input', calculateScore); // New
+            document.getElementById('anni_res').addEventListener('input', calculateScore);   // New
+            document.getElementById('anni_exp').addEventListener('input', calculateScore);    // New
         });
     </script>
 
@@ -472,7 +570,7 @@
             Diablo 2 Item Valuation Scroll
         </h1>
         <p class="text-center text-gray-400 mb-6 text-lg">
-            Rare (6-Point) & Unique Torch (20/20) Scoring.
+            Rare (6-Point), Unique Torch, & Annihilus Scoring.
         </p>
 
         <!-- Item Type Selection -->
@@ -486,6 +584,7 @@
                 <option value="Circlet">Rare Circlet/Diadem</option>
                 <option value="Belt">Rare Belt</option>
                 <option value="Torch">Hellfire Torch (Unique)</option>
+                <option value="Annihilus">Annihilus (Unique Charm)</option>
             </select>
         </div>
 
@@ -528,6 +627,29 @@
                 </p>
             </div>
 
+            <!-- 3. ANNIHILUS INPUTS (New, Hidden by default) -->
+            <div id="anni-inputs-container" class="hidden">
+                <h3 class="text-xl stat-label text-center mb-4">Annihilus Rolls (1/10/5 minimum)</h3>
+                <div class="grid grid-cols-3 gap-4">
+                    <div class="col-span-3 sm:col-span-1">
+                        <label for="anni_stats" class="stat-label block">Attributes (Max 20)</label>
+                        <input type="number" id="anni_stats" min="10" max="20" placeholder="10" class="w-full" value="10">
+                    </div>
+                    <div class="col-span-3 sm:col-span-1">
+                        <label for="anni_res" class="stat-label block">Resistances (Max 20%)</label>
+                        <input type="number" id="anni_res" min="10" max="20" placeholder="10" class="w-full" value="10">
+                    </div>
+                    <div class="col-span-3 sm:col-span-1">
+                        <label for="anni_exp" class="stat-label block">Experience (Max 10%)</label>
+                        <input type="number" id="anni_exp" min="5" max="10" placeholder="5" class="w-full" value="5">
+                    </div>
+                </div>
+                <p class="text-sm italic mt-4 text-gray-400 text-center border-t border-gray-700 pt-2">
+                    Annihilus always grants +1 to All Skills. Total Score is based on (Stats + Res + Exp).
+                </p>
+            </div>
+
+
         </form>
 
         <!-- Result Display -->
@@ -548,6 +670,7 @@
     </div>
 
 </body>
+
 
 
 
