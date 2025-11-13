@@ -244,36 +244,38 @@
          */
         function getEstimatedValue(score, itemType, torchClass = null) {
             if (itemType === 'Torch') {
-                let baseTier = 0; // Base value tier from 0 to 40
-                if (score >= 38) baseTier = 4; // Near perfect+
-                else if (score >= 35) baseTier = 3; // High tier
-                else if (score >= 30) baseTier = 2; // Mid tier
-                else if (score >= 25) baseTier = 1; // Low tier
-                
-                let classMultiplier = 1.0;
                 let classTierText = "";
+                let valuation = "No Trade Value (Below 25 Total Roll)";
 
-                // Determine class demand multiplier based on meta
+                // S-Tier (Highest Demand): Paladin, Sorceress
                 if (torchClass === "Paladin" || torchClass === "Sorceress") {
-                    classMultiplier = 1.8; // S-Tier
-                    classTierText = "(S-Tier: Highest Demand)";
+                    classTierText = "(S-Tier: High/Essential Demand)";
+                    if (score >= 38) valuation = `Multiple High Runes (Jah/Ber+) ${classTierText}`; // 19/19+
+                    else if (score >= 35) valuation = `Ohm - Lo Rune ${classTierText}`; // 15/20+
+                    else if (score >= 25) valuation = `Vex - Gul Rune ${classTierText}`; // 10/15+ to 15/15-
+                    else valuation = `Starter/Low Vex/Gul ${classTierText}`; // Base/Low rolls still have value due to class
+                
+                // A-Tier (Moderate Demand): Necromancer, Amazon
                 } else if (torchClass === "Necromancer" || torchClass === "Amazon") {
-                    classMultiplier = 1.2; // A-Tier
-                    classTierText = "(A-Tier: High/Moderate Demand)";
+                    classTierText = "(A-Tier: Moderate Demand)";
+                    if (score >= 38) valuation = `Lo - Sur Rune ${classTierText}`;
+                    else if (score >= 35) valuation = `Vex - Ohm Rune ${classTierText}`;
+                    else if (score >= 30) valuation = `Gul - Ist Rune ${classTierText}`;
+                    else if (score >= 25) valuation = `Um - Pul Rune ${classTierText}`;
+                    else valuation = `Pul Rune (Swap/Starter Torch) ${classTierText}`;
+
+                // B-Tier (Lower Demand): Assassin, Barbarian, Druid
                 } else {
-                    classMultiplier = 0.8; // B-Tier (Assassin, Barbarian, Druid)
                     classTierText = "(B-Tier: Lower/Swap Demand)";
+                    if (score >= 38) valuation = `Vex - Ohm Rune ${classTierText}`;
+                    else if (score >= 35) valuation = `Ist - Gul Rune ${classTierText}`;
+                    else if (score >= 30) valuation = `Pul - Um Rune ${classTierText}`;
+                    else if (score >= 25) valuation = `Fal - Ko Rune ${classTierText}`;
+                    else valuation = `Ko Rune (Charsi/Self-Use) ${classTierText}`;
                 }
 
-                const effectiveScore = baseTier * classMultiplier;
-                
-                // Apply class-adjusted valuation
-                if (effectiveScore >= 6.0) return `High Runes (Jah/Ber+) ${classTierText}`;
-                if (effectiveScore >= 4.5) return `Ohm - Lo Rune ${classTierText}`;
-                if (effectiveScore >= 3.0) return `Vex - Gul Rune ${classTierText}`;
-                if (effectiveScore >= 2.0) return `Um - Ist Rune ${classTierText}`;
-                if (effectiveScore >= 1.0) return `Pul Rune ${classTierText}`;
-                return `Ko - Fal Rune (Swap/Starter Torch) ${classTierText}`;
+                return valuation;
+
             } else { // Rare Items (score out of 6.0)
                 if (score >= 5.5) return "Multiple High Runes (Ber, Jah+)";
                 if (score >= 5.0) return "Vex - Ohm";
@@ -534,7 +536,7 @@
         </div>
 
     </div>
-    </div>
+	
 	<!-- Kaspa Links -->
     <div class="mt-8 text-center w-full max-w-xl">
 	 <a href="https://explorer.kaspa.org/addresses/kaspa:qprxkkvetjgxpsz4c7st887j3tdcq2yexhtlh2myutu9t9f76d70ws5sgq82l?page=1" target="_blank" class="kaspa-link underline block">Please consider a donation!</a></p>
@@ -546,6 +548,7 @@
     </div>
 
 </body>
+
 
 
 
