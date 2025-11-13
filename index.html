@@ -75,42 +75,51 @@
         // --- CORE CONFIGURATION & SCORING LOGIC ---
 
         const MAX_ROLLS = {
-            // Universal Affixes
-            str: 20,
+            // Universal Affixes (for accessories like rings/amulets)
+            str: 20, // Max Str on accessories
             dex: 15,
-            life: 40,
+            life: 40, // Max Life on accessories
             all_res: 11,
             single_res: 30, // Max for a single resistance mod (Fire, Cold, Light, Poison)
             
             // Item-Specific Affixes
             fcr_ring: 10,
-            fcr_amulet: 20,
-            plus_skills_amulet: 2, // +2 Class/Tree skills on Amulets
+            fcr_amulet: 20, // Also used for Circlet FCR
+            plus_skills_amulet: 2, // Also used for Circlet +Skills
             mana: 90,
             ar: 120,
-            life_leech: 8, // Max LL on Ring/Gloves
-            mana_leech: 6, // Max ML on Ring/Gloves
+            life_leech: 8, 
+            mana_leech: 6, 
             replenish_life: 9,
 
             // Glove Specific Affixes
-            plus_skills_gloves: 2, // +2 Single Tree skills on Gloves
-            crushing_blow_gloves: 10, // Max 10% crushing blow on Rare Gloves
-            ias_gloves: 20, // Increased Attack Speed on Gloves
-            max_damage_gloves: 3, // Max damage for Java/Bow Gloves
+            plus_skills_gloves: 2, 
+            crushing_blow_gloves: 10, 
+            ias_gloves: 20, 
+            max_damage_gloves: 3, 
 
             // Boot Specific Affixes
-            frw: 30, // Faster Run/Walk on Boots
-            fhr: 10, // Faster Hit Recovery on Boots
+            frw: 30, 
+            fhr: 10, // FHR max on boots
+
+            // NEW: Circlet and Belt specific affixes (higher rolls)
+            life_belt_circlet: 60, // Max life on belts and circlets
+            str_belt: 30, // Max strength on belts
+            fhr_belt: 24, // Max FHR on belts
         };
 
         // Define which affixes are possible and valuable for each item type
         const ITEM_AFFIXES = {
             Ring: ['fcr_ring', 'str', 'dex', 'life', 'mana', 'ar', 'all_res', 'life_leech', 'mana_leech', 'replenish_life', 'fire_res', 'cold_res', 'light_res', 'poison_res'],
             Amulet: ['fcr_amulet', 'plus_skills_amulet', 'str', 'dex', 'life', 'mana', 'all_res', 'life_leech', 'mana_leech', 'fire_res', 'cold_res', 'light_res', 'poison_res'],
-            // UPDATED: Replaced 'dual_leech' with separate 'life_leech' and 'mana_leech'
             Gloves: ['ias_gloves', 'str', 'dex', 'life', 'mana', 'life_leech', 'mana_leech', 'fire_res', 'cold_res', 'light_res', 'poison_res', 'max_damage_gloves', 'crushing_blow_gloves', 'plus_skills_gloves'],
             Boots: ['frw', 'fhr', 'life', 'mana', 'fire_res', 'cold_res', 'light_res', 'poison_res'],
-            // Weapons and Armor are too complex for a generalized score, focusing on high-value accessories/clothing
+            
+            // NEW: Circlet (Uses Amulet FCR/Skills, but higher Life roll)
+            Circlet: ['fcr_amulet', 'plus_skills_amulet', 'str', 'dex', 'life_belt_circlet', 'mana', 'all_res', 'fire_res', 'cold_res', 'light_res', 'poison_res'],
+            
+            // NEW: Belt (Higher Life/Str/FHR rolls)
+            Belt: ['fhr_belt', 'str_belt', 'dex', 'life_belt_circlet', 'mana', 'all_res', 'fire_res', 'cold_res', 'light_res', 'poison_res'],
         };
 
         const INPUT_FIELDS = {
@@ -125,23 +134,29 @@
             'life_leech': { label: 'Life Leech', max: MAX_ROLLS.life_leech, unit: '%', type: 'number' },
             'mana_leech': { label: 'Mana Leech', max: MAX_ROLLS.mana_leech, unit: '%', type: 'number' },
             
-            // Ring/Amulet FCR
+            // Ring FCR
             'fcr_ring': { label: 'Faster Cast Rate (FCR)', max: MAX_ROLLS.fcr_ring, unit: '%', type: 'number', mapTo: 'fcr' },
-            'fcr_amulet': { label: 'Faster Cast Rate (FCR)', max: MAX_ROLLS.fcr_amulet, unit: '%', type: 'number', mapTo: 'fcr' },
-
-            // Amulet Specific
-            'plus_skills_amulet': { label: '+ Skills (Class/Tree)', max: MAX_ROLLS.plus_skills_amulet, unit: '', type: 'number' },
             
+            // Amulet/Circlet FCR/Skills
+            'fcr_amulet': { label: 'Faster Cast Rate (FCR)', max: MAX_ROLLS.fcr_amulet, unit: '%', type: 'number', mapTo: 'fcr' },
+            'plus_skills_amulet': { label: '+ Skills (Class/Tree)', max: MAX_ROLLS.plus_skills_amulet, unit: '', type: 'number' },
+
             // Gloves Specific
             'plus_skills_gloves': { label: '+ Skills (Single Tree)', max: MAX_ROLLS.plus_skills_gloves, unit: '', type: 'number' },
             'crushing_blow_gloves': { label: 'Crushing Blow (CB)', max: MAX_ROLLS.crushing_blow_gloves, unit: '%', type: 'number' },
             'ias_gloves': { label: 'Increased Attack Speed (IAS)', max: MAX_ROLLS.ias_gloves, unit: '%', type: 'number' },
-            // Removed 'dual_leech' as it's replaced by separate 'life_leech' and 'mana_leech'
             'max_damage_gloves': { label: '+Max Damage', max: MAX_ROLLS.max_damage_gloves, unit: '', type: 'number' },
 
             // Boots Specific
             'frw': { label: 'Faster Run/Walk (FRW)', max: MAX_ROLLS.frw, unit: '%', type: 'number' },
             'fhr': { label: 'Faster Hit Recovery (FHR)', max: MAX_ROLLS.fhr, unit: '%', type: 'number' },
+            
+            // NEW: Circlet and Belt shared large stats
+            'life_belt_circlet': { label: 'Life', max: MAX_ROLLS.life_belt_circlet, unit: '', type: 'number' },
+            
+            // NEW: Belt specific large stats
+            'str_belt': { label: 'Strength', max: MAX_ROLLS.str_belt, unit: '', type: 'number' },
+            'fhr_belt': { label: 'Faster Hit Recovery (FHR)', max: MAX_ROLLS.fhr_belt, unit: '%', type: 'number' },
             
             // Single Resistances (use separate inputs for clarity but a combined max roll)
             'fire_res': { label: 'Fire Resistance', max: MAX_ROLLS.single_res, unit: '%', type: 'number', isSingleRes: true },
@@ -189,6 +204,17 @@
             let generalHtml = '<div class="grid grid-cols-2 gap-4">';
             generalMods.forEach(id => {
                 const config = INPUT_FIELDS[id];
+                // Determine the correct max roll property name based on item type for dynamic display
+                let maxRollKey = id;
+                if (id === 'life_belt_circlet' || id === 'str_belt' || id === 'fhr_belt') {
+                    // Use the dedicated max roll keys
+                } else if (id === 'plus_skills_amulet' || id === 'fcr_amulet') {
+                    // Use the existing amulet/head keys
+                } else if (itemType === 'Circlet' || itemType === 'Belt') {
+                    // If it's a universal stat like 'dex' or 'mana', use its universal max roll
+                    maxRollKey = id; 
+                }
+
                 generalHtml += `
                     <div class="col-span-2 sm:col-span-1" data-affix-id="${id}">
                         <label for="${id}" class="stat-label block">${config.label} (Max ${config.max}${config.unit})</label>
@@ -351,6 +377,8 @@
                 <option value="Amulet">Rare Amulet</option>
                 <option value="Gloves">Rare Gloves</option>
                 <option value="Boots">Rare Boots</option>
+                <option value="Circlet">Rare Circlet/Diadem</option>
+                <option value="Belt">Rare Belt</option>
             </select>
         </div>
 
@@ -379,5 +407,6 @@
     </div>
 
 </body>
+
 
 
